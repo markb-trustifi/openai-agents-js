@@ -16,7 +16,7 @@ interface ComputerBase {
   environment: Environment;
   dimensions: [number, number];
 
-  invoke(
+  invoke?(
     runContext: RunContext,
     toolCall: protocol.ComputerUseCallItem,
   ): Promisable<string>;
