@@ -135,7 +135,8 @@ dist
 .yarn/install-state.gz
 .pnp.*
 
-packages/*/dist
+#packages/*/dist
+!packages/*/dist
 
 docs/src/content/docs/@openai/*
 docs/src/content/docs/openai/*
