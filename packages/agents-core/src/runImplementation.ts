@@ -1757,7 +1757,11 @@ export async function executeComputerActions(
     // Run the action and get screenshot
     let output: string;
     try {
-      output = await _runComputerActionAndScreenshot(computer, toolCall);
+      if (computer.invoke) {
+        output = await computer.invoke(runContext, toolCall);
+      } else {
+        output = await _runComputerActionAndScreenshot(computer, toolCall);
+      }
     } catch (err) {
       _logger.error('Failed to execute computer action:', err);
       output = '';

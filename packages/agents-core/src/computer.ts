@@ -1,8 +1,11 @@
+import * as protocol from './types/protocol';
+
 export type Environment = 'mac' | 'windows' | 'ubuntu' | 'browser';
 export type Button = 'left' | 'right' | 'wheel' | 'back' | 'forward';
 
 import { Expand, SnakeToCamelCase } from './types/helpers';
-import type { ComputerAction } from './types/protocol';
+import { ComputerAction } from './types/protocol';
+import { RunContext } from './runContext';
 
 type Promisable<T> = T | Promise<T>;
 
@@ -13,6 +16,10 @@ interface ComputerBase {
   environment: Environment;
   dimensions: [number, number];
 
+  invoke(
+    runContext: RunContext,
+    toolCall: protocol.ComputerUseCallItem,
+  ): Promisable<string>;
   screenshot(): Promisable<string>;
   click(x: number, y: number, button: Button): Promisable<void>;
   doubleClick(x: number, y: number): Promisable<void>;
