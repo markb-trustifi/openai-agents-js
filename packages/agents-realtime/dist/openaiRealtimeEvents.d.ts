@@ -719,12 +719,56 @@ export declare const conversationItemInputAudioTranscriptionCompletedEventSchema
     content_index: z.ZodNumber;
     transcript: z.ZodString;
     logprobs: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodAny, "many">>>;
+    usage: z.ZodOptional<z.ZodObject<{
+        type: z.ZodLiteral<"tokens">;
+        total_tokens: z.ZodNumber;
+        input_tokens: z.ZodNumber;
+        input_token_details: z.ZodObject<{
+            text_tokens: z.ZodNumber;
+            audio_tokens: z.ZodNumber;
+        }, "strip", z.ZodTypeAny, {
+            text_tokens: number;
+            audio_tokens: number;
+        }, {
+            text_tokens: number;
+            audio_tokens: number;
+        }>;
+        output_tokens: z.ZodNumber;
+    }, "strip", z.ZodTypeAny, {
+        type: "tokens";
+        input_tokens: number;
+        input_token_details: {
+            text_tokens: number;
+            audio_tokens: number;
+        };
+        output_tokens: number;
+        total_tokens: number;
+    }, {
+        type: "tokens";
+        input_tokens: number;
+        input_token_details: {
+            text_tokens: number;
+            audio_tokens: number;
+        };
+        output_tokens: number;
+        total_tokens: number;
+    }>>;
 }, "strip", z.ZodTypeAny, {
     type: "conversation.item.input_audio_transcription.completed";
     transcript: string;
     event_id: string;
     item_id: string;
     content_index: number;
+    usage?: {
+        type: "tokens";
+        input_tokens: number;
+        input_token_details: {
+            text_tokens: number;
+            audio_tokens: number;
+        };
+        output_tokens: number;
+        total_tokens: number;
+    } | undefined;
     logprobs?: any[] | null | undefined;
 }, {
     type: "conversation.item.input_audio_transcription.completed";
@@ -732,6 +776,16 @@ export declare const conversationItemInputAudioTranscriptionCompletedEventSchema
     event_id: string;
     item_id: string;
     content_index: number;
+    usage?: {
+        type: "tokens";
+        input_tokens: number;
+        input_token_details: {
+            text_tokens: number;
+            audio_tokens: number;
+        };
+        output_tokens: number;
+        total_tokens: number;
+    } | undefined;
     logprobs?: any[] | null | undefined;
 }>;
 export declare const conversationItemInputAudioTranscriptionDeltaEventSchema: z.ZodObject<{
@@ -1424,12 +1478,12 @@ export declare const rateLimitsUpdatedEventSchema: z.ZodObject<{
         remaining: z.ZodOptional<z.ZodNumber>;
         reset_seconds: z.ZodOptional<z.ZodNumber>;
     }, "strip", z.ZodTypeAny, {
-        name?: "requests" | "tokens" | undefined;
+        name?: "tokens" | "requests" | undefined;
         limit?: number | undefined;
         remaining?: number | undefined;
         reset_seconds?: number | undefined;
     }, {
-        name?: "requests" | "tokens" | undefined;
+        name?: "tokens" | "requests" | undefined;
         limit?: number | undefined;
         remaining?: number | undefined;
         reset_seconds?: number | undefined;
@@ -1438,7 +1492,7 @@ export declare const rateLimitsUpdatedEventSchema: z.ZodObject<{
     type: "rate_limits.updated";
     event_id: string;
     rate_limits: {
-        name?: "requests" | "tokens" | undefined;
+        name?: "tokens" | "requests" | undefined;
         limit?: number | undefined;
         remaining?: number | undefined;
         reset_seconds?: number | undefined;
@@ -1447,7 +1501,7 @@ export declare const rateLimitsUpdatedEventSchema: z.ZodObject<{
     type: "rate_limits.updated";
     event_id: string;
     rate_limits: {
-        name?: "requests" | "tokens" | undefined;
+        name?: "tokens" | "requests" | undefined;
         limit?: number | undefined;
         remaining?: number | undefined;
         reset_seconds?: number | undefined;
@@ -3136,12 +3190,56 @@ export declare const realtimeServerEventSchema: z.ZodDiscriminatedUnion<"type", 
     content_index: z.ZodNumber;
     transcript: z.ZodString;
     logprobs: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodAny, "many">>>;
+    usage: z.ZodOptional<z.ZodObject<{
+        type: z.ZodLiteral<"tokens">;
+        total_tokens: z.ZodNumber;
+        input_tokens: z.ZodNumber;
+        input_token_details: z.ZodObject<{
+            text_tokens: z.ZodNumber;
+            audio_tokens: z.ZodNumber;
+        }, "strip", z.ZodTypeAny, {
+            text_tokens: number;
+            audio_tokens: number;
+        }, {
+            text_tokens: number;
+            audio_tokens: number;
+        }>;
+        output_tokens: z.ZodNumber;
+    }, "strip", z.ZodTypeAny, {
+        type: "tokens";
+        input_tokens: number;
+        input_token_details: {
+            text_tokens: number;
+            audio_tokens: number;
+        };
+        output_tokens: number;
+        total_tokens: number;
+    }, {
+        type: "tokens";
+        input_tokens: number;
+        input_token_details: {
+            text_tokens: number;
+            audio_tokens: number;
+        };
+        output_tokens: number;
+        total_tokens: number;
+    }>>;
 }, "strip", z.ZodTypeAny, {
     type: "conversation.item.input_audio_transcription.completed";
     transcript: string;
     event_id: string;
     item_id: string;
     content_index: number;
+    usage?: {
+        type: "tokens";
+        input_tokens: number;
+        input_token_details: {
+            text_tokens: number;
+            audio_tokens: number;
+        };
+        output_tokens: number;
+        total_tokens: number;
+    } | undefined;
     logprobs?: any[] | null | undefined;
 }, {
     type: "conversation.item.input_audio_transcription.completed";
@@ -3149,6 +3247,16 @@ export declare const realtimeServerEventSchema: z.ZodDiscriminatedUnion<"type", 
     event_id: string;
     item_id: string;
     content_index: number;
+    usage?: {
+        type: "tokens";
+        input_tokens: number;
+        input_token_details: {
+            text_tokens: number;
+            audio_tokens: number;
+        };
+        output_tokens: number;
+        total_tokens: number;
+    } | undefined;
     logprobs?: any[] | null | undefined;
 }>, z.ZodObject<{
     type: z.ZodLiteral<"conversation.item.input_audio_transcription.delta">;
@@ -3540,12 +3648,12 @@ export declare const realtimeServerEventSchema: z.ZodDiscriminatedUnion<"type", 
         remaining: z.ZodOptional<z.ZodNumber>;
         reset_seconds: z.ZodOptional<z.ZodNumber>;
     }, "strip", z.ZodTypeAny, {
-        name?: "requests" | "tokens" | undefined;
+        name?: "tokens" | "requests" | undefined;
         limit?: number | undefined;
         remaining?: number | undefined;
         reset_seconds?: number | undefined;
     }, {
-        name?: "requests" | "tokens" | undefined;
+        name?: "tokens" | "requests" | undefined;
         limit?: number | undefined;
         remaining?: number | undefined;
         reset_seconds?: number | undefined;
@@ -3554,7 +3662,7 @@ export declare const realtimeServerEventSchema: z.ZodDiscriminatedUnion<"type", 
     type: "rate_limits.updated";
     event_id: string;
     rate_limits: {
-        name?: "requests" | "tokens" | undefined;
+        name?: "tokens" | "requests" | undefined;
         limit?: number | undefined;
         remaining?: number | undefined;
         reset_seconds?: number | undefined;
@@ -3563,7 +3671,7 @@ export declare const realtimeServerEventSchema: z.ZodDiscriminatedUnion<"type", 
     type: "rate_limits.updated";
     event_id: string;
     rate_limits: {
-        name?: "requests" | "tokens" | undefined;
+        name?: "tokens" | "requests" | undefined;
         limit?: number | undefined;
         remaining?: number | undefined;
         reset_seconds?: number | undefined;

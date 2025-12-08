@@ -4,9 +4,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.METADATA = void 0;
 exports.METADATA = {
     "name": "@openai/agents-realtime",
-    "version": "0.3.3",
+    "version": "0.3.4",
     "versions": {
-        "@openai/agents-realtime": "0.3.3",
+        "@openai/agents-realtime": "0.3.4",
         "@openai/agents-core": "workspace:*"
     }
 };

@@ -12,7 +12,7 @@ export { extractAllTextOutput, RunHandoffCallItem, RunHandoffOutputItem, RunItem
 export { AgentHooks } from './lifecycle';
 export { getLogger } from './logger';
 export { applyDiff } from './utils/applyDiff';
-export { getAllMcpTools, invalidateServerToolsCache, mcpToFunctionTool, MCPServer, MCPServerStdio, MCPServerStreamableHttp, MCPServerSSE, GetAllMcpToolsOptions, } from './mcp';
+export { getAllMcpTools, invalidateServerToolsCache, mcpToFunctionTool, MCPServer, MCPServerStdio, MCPServerStreamableHttp, MCPServerSSE, GetAllMcpToolsOptions, MCPToolCacheKeyGenerator, } from './mcp';
 export { MCPToolFilterCallable, MCPToolFilterContext, MCPToolFilterStatic, createMCPToolStaticFilter, } from './mcpUtil';
 export { Model, ModelProvider, ModelRequest, ModelResponse, ModelSettings, ModelSettingsToolChoice, SerializedHandoff, SerializedTool, SerializedOutputType, } from './model';
 export { OPENAI_DEFAULT_MODEL_ENV_VARIABLE_NAME, gpt5ReasoningSettingsRequired, getDefaultModel, getDefaultModelSettings, isGpt5Default, } from './defaultModel';
@@ -22,7 +22,7 @@ export { IndividualRunOptions, NonStreamRunOptions, run, RunConfig, Runner, Stre
 export type { ModelInputData, CallModelInputFilter, CallModelInputFilterArgs, } from './run';
 export { RunContext } from './runContext';
 export { RunState } from './runState';
-export { HostedTool, ComputerTool, computerTool, ShellTool, shellTool, ApplyPatchTool, applyPatchTool, HostedMCPTool, hostedMcpTool, FunctionTool, FunctionToolResult, Tool, tool, ToolExecuteArgument, ToolEnabledFunction, } from './tool';
+export { HostedTool, ComputerTool, computerTool, ShellTool, shellTool, ApplyPatchTool, applyPatchTool, HostedMCPTool, hostedMcpTool, FunctionTool, FunctionToolResult, Tool, ToolOptions, tool, ToolExecuteArgument, ToolEnabledFunction, } from './tool';
 export type { ToolOutputText, ToolOutputImage, ToolOutputFileContent, ToolCallStructuredOutput, ToolCallOutputContent, } from './types/protocol';
 export * from './tracing';
 export { getGlobalTraceProvider, TraceProvider } from './tracing/provider';

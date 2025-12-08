@@ -161,6 +161,20 @@ export declare class MCPServerSSE extends BaseMCPServerSSE {
  */
 export declare function invalidateServerToolsCache(serverName: string): Promise<void>;
 /**
+ * Function signature for generating the MCP tool cache key.
+ * Customizable so the cache key can depend on any context—server, agent, runContext, etc.
+ */
+export type MCPToolCacheKeyGenerator = (params: {
+    server: MCPServer;
+    agent?: Agent<any, any>;
+    runContext?: RunContext<any>;
+}) => string;
+/**
+ * Default cache key generator for MCP tools.
+ * Uses server name, or server+agent if using callable filter.
+ */
+export declare const defaultMCPToolCacheKey: MCPToolCacheKeyGenerator;
+/**
  * Options for fetching MCP tools.
  */
 export type GetAllMcpToolsOptions<TContext> = {
@@ -168,13 +182,13 @@ export type GetAllMcpToolsOptions<TContext> = {
     convertSchemasToStrict?: boolean;
     runContext?: RunContext<TContext>;
     agent?: Agent<TContext, any>;
+    generateMCPToolCacheKey?: MCPToolCacheKeyGenerator;
 };
 /**
  * Returns all MCP tools from the provided servers, using the function tool conversion.
  * If runContext and agent are provided, callable tool filters will be applied.
  */
-export declare function getAllMcpTools<TContext = UnknownContext>(mcpServers: MCPServer[]): Promise<Tool<TContext>[]>;
-export declare function getAllMcpTools<TContext = UnknownContext>(opts: GetAllMcpToolsOptions<TContext>): Promise<Tool<TContext>[]>;
+export declare function getAllMcpTools<TContext = UnknownContext>(mcpServersOrOpts: MCPServer[] | GetAllMcpToolsOptions<TContext>, runContext?: RunContext<TContext>, agent?: Agent<TContext, any>, convertSchemasToStrict?: boolean): Promise<Tool<TContext>[]>;
 /**
  * Converts an MCP tool definition to a function tool for the Agents SDK.
  */
@@ -227,6 +241,7 @@ export interface MCPServerSSEOptions {
     timeout?: number;
     authProvider?: any;
     requestInit?: any;
+    fetch?: any;
     eventSourceInit?: any;
 }
 /**

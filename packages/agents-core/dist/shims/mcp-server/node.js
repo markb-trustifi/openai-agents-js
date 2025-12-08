@@ -181,6 +181,7 @@ class NodeMCPServerSSE extends mcp_1.BaseMCPServerSSE {
                 authProvider: this.params.authProvider,
                 requestInit: this.params.requestInit,
                 eventSourceInit: this.params.eventSourceInit,
+                fetch: this.params.fetch,
             });
             this.session = new Client({
                 name: this._name,

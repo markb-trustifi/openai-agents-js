@@ -130,6 +130,18 @@ exports.conversationItemInputAudioTranscriptionCompletedEventSchema = zod_1.z.ob
     content_index: zod_1.z.number(),
     transcript: zod_1.z.string(),
     logprobs: zod_1.z.array(zod_1.z.any()).nullable().optional(),
+    usage: zod_1.z
+        .object({
+        type: zod_1.z.literal('tokens'),
+        total_tokens: zod_1.z.number(),
+        input_tokens: zod_1.z.number(),
+        input_token_details: zod_1.z.object({
+            text_tokens: zod_1.z.number(),
+            audio_tokens: zod_1.z.number(),
+        }),
+        output_tokens: zod_1.z.number(),
+    })
+        .optional(),
 });
 exports.conversationItemInputAudioTranscriptionDeltaEventSchema = zod_1.z.object({
     type: zod_1.z.literal('conversation.item.input_audio_transcription.delta'),

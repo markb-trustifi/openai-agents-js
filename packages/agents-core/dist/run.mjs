@@ -800,11 +800,15 @@ export class Runner extends RunHooks {
         const guardrails = this.outputGuardrailDefs.concat(state._currentAgent.outputGuardrails.map(defineOutputGuardrail));
         if (guardrails.length > 0) {
             const agentOutput = state._currentAgent.processFinalOutput(output);
+            const runOutput = getTurnInput([], state._generatedItems);
             const guardrailArgs = {
                 agent: state._currentAgent,
                 agentOutput,
                 context: state._context,
-                details: { modelResponse: state._lastTurnResponse },
+                details: {
+                    modelResponse: state._lastTurnResponse,
+                    output: runOutput,
+                },
             };
             try {
                 const results = await Promise.all(guardrails.map(async (guardrail) => {

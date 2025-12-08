@@ -62,7 +62,7 @@ function itemsToLanguageV2Messages(model, items) {
                                 const url = new URL(imageSource);
                                 return {
                                     type: 'file',
-                                    data: url.toString(),
+                                    data: url,
                                     mediaType: 'image/*',
                                     providerOptions: {
                                         ...(contentProviderData ?? {}),
@@ -574,7 +574,8 @@ class AiSdkModel {
                         name: toolCall.toolName,
                         arguments: toolCallArguments,
                         status: 'completed',
-                        providerData: hasToolCalls ? result.providerMetadata : undefined,
+                        providerData: toolCall.providerMetadata ??
+                            (hasToolCalls ? result.providerMetadata : undefined),
                     });
                 }
                 // Some of other platforms may return both tool calls and text.
@@ -748,6 +749,9 @@ class AiSdkModel {
                                 name: part.toolName,
                                 arguments: part.input ?? '',
                                 status: 'completed',
+                                ...(part.providerMetadata
+                                    ? { providerData: part.providerMetadata }
+                                    : {}),
                             };
                         }
                         break;

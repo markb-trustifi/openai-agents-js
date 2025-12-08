@@ -195,20 +195,50 @@ export class MCPServerSSE extends BaseMCPServerSSE {
  * Logs and skips any servers that fail to respond.
  */
 const _cachedTools = {};
+const _cachedToolKeysByServer = {};
 /**
  * Remove cached tools for the given server so the next lookup fetches fresh data.
  *
  * @param serverName - Name of the MCP server whose cache should be cleared.
  */
 export async function invalidateServerToolsCache(serverName) {
+    const cachedKeys = _cachedToolKeysByServer[serverName];
+    if (cachedKeys) {
+        for (const cacheKey of cachedKeys) {
+            delete _cachedTools[cacheKey];
+        }
+        delete _cachedToolKeysByServer[serverName];
+        return;
+    }
     delete _cachedTools[serverName];
+    for (const cacheKey of Object.keys(_cachedTools)) {
+        if (cacheKey.startsWith(`${serverName}:`)) {
+            delete _cachedTools[cacheKey];
+        }
+    }
 }
+/**
+ * Default cache key generator for MCP tools.
+ * Uses server name, or server+agent if using callable filter.
+ */
+export const defaultMCPToolCacheKey = ({ server, agent, }) => {
+    if (server.toolFilter && typeof server.toolFilter === 'function' && agent) {
+        return `${server.name}:${agent.name}`;
+    }
+    return server.name;
+};
 /**
  * Fetches all function tools from a single MCP server.
  */
-async function getFunctionToolsFromServer({ server, convertSchemasToStrict, runContext, agent, }) {
-    if (server.cacheToolsList && _cachedTools[server.name]) {
-        return _cachedTools[server.name].map((t) => mcpToFunctionTool(t, server, convertSchemasToStrict));
+async function getFunctionToolsFromServer({ server, convertSchemasToStrict, runContext, agent, generateMCPToolCacheKey, }) {
+    const cacheKey = (generateMCPToolCacheKey || defaultMCPToolCacheKey)({
+        server,
+        agent,
+        runContext,
+    });
+    // Use cache key generator injected from the outside, or the default if absent.
+    if (server.cacheToolsList && _cachedTools[cacheKey]) {
+        return _cachedTools[cacheKey].map((t) => mcpToFunctionTool(t, server, convertSchemasToStrict));
     }
     const listToolsForServer = async (span) => {
         const fetchedMcpTools = await server.listTools();
@@ -256,8 +286,13 @@ async function getFunctionToolsFromServer({ server, convertSchemasToStrict, runC
             span.spanData.result = mcpTools.map((t) => t.name);
         }
         const tools = mcpTools.map((t) => mcpToFunctionTool(t, server, convertSchemasToStrict));
+        // Cache store
         if (server.cacheToolsList) {
-            _cachedTools[server.name] = mcpTools;
+            _cachedTools[cacheKey] = mcpTools;
+            if (!_cachedToolKeysByServer[server.name]) {
+                _cachedToolKeysByServer[server.name] = new Set();
+            }
+            _cachedToolKeysByServer[server.name].add(cacheKey);
         }
         return tools;
     };
@@ -268,6 +303,10 @@ async function getFunctionToolsFromServer({ server, convertSchemasToStrict, runC
         data: { server: server.name },
     });
 }
+/**
+ * Returns all MCP tools from the provided servers, using the function tool conversion.
+ * If runContext and agent are provided, callable tool filters will be applied.
+ */
 export async function getAllMcpTools(mcpServersOrOpts, runContext, agent, convertSchemasToStrict = false) {
     const opts = Array.isArray(mcpServersOrOpts)
         ? {
@@ -277,7 +316,7 @@ export async function getAllMcpTools(mcpServersOrOpts, runContext, agent, conver
             convertSchemasToStrict,
         }
         : mcpServersOrOpts;
-    const { mcpServers, convertSchemasToStrict: convertSchemasToStrictFromOpts = false, runContext: runContextFromOpts, agent: agentFromOpts, } = opts;
+    const { mcpServers, convertSchemasToStrict: convertSchemasToStrictFromOpts = false, runContext: runContextFromOpts, agent: agentFromOpts, generateMCPToolCacheKey, } = opts;
     const allTools = [];
     const toolNames = new Set();
     for (const server of mcpServers) {
@@ -286,6 +325,7 @@ export async function getAllMcpTools(mcpServersOrOpts, runContext, agent, conver
             convertSchemasToStrict: convertSchemasToStrictFromOpts,
             runContext: runContextFromOpts,
             agent: agentFromOpts,
+            generateMCPToolCacheKey,
         });
         const serverToolNames = new Set(serverTools.map((t) => t.name));
         const intersection = [...serverToolNames].filter((n) => toolNames.has(n));
