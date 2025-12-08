@@ -94,7 +94,7 @@ export function itemsToLanguageV2Messages(
                     const url = new URL(imageSource);
                     return {
                       type: 'file',
-                      data: url.toString(),
+                      data: url,
                       mediaType: 'image/*',
                       providerOptions: {
                         ...(contentProviderData ?? {}),
@@ -711,7 +711,9 @@ export class AiSdkModel implements Model {
             name: toolCall.toolName,
             arguments: toolCallArguments,
             status: 'completed',
-            providerData: hasToolCalls ? result.providerMetadata : undefined,
+            providerData:
+              toolCall.providerMetadata ??
+              (hasToolCalls ? result.providerMetadata : undefined),
           });
         }
 
@@ -916,6 +918,9 @@ export class AiSdkModel implements Model {
                 name: (part as any).toolName,
                 arguments: (part as any).input ?? '',
                 status: 'completed',
+                ...((part as any).providerMetadata
+                  ? { providerData: (part as any).providerMetadata }
+                  : {}),
               };
             }
             break;

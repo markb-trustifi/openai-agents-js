@@ -80,6 +80,7 @@ export {
   MCPServerStreamableHttp,
   MCPServerSSE,
   GetAllMcpToolsOptions,
+  MCPToolCacheKeyGenerator,
 } from './mcp';
 export {
   MCPToolFilterCallable,
@@ -135,6 +136,7 @@ export {
   FunctionTool,
   FunctionToolResult,
   Tool,
+  ToolOptions,
   tool,
   ToolExecuteArgument,
   ToolEnabledFunction,
