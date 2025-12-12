@@ -15,8 +15,7 @@ export declare class RunContext<TContext = UnknownContext> {
      */
     context: TContext;
     /**
-     * The usage of the agent run so far. For streamed responses, the usage will be stale until the
-     * last chunk of the stream is processed.
+     * The usage of the agent run so far. For streamed responses, the usage will be updated in real-time
      */
     usage: Usage;
     constructor(context?: TContext);

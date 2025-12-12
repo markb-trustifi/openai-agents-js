@@ -6,16 +6,28 @@ import type { Model, ModelSettings, Prompt } from './model';
 import type { RunContext } from './runContext';
 import { type FunctionTool, type FunctionToolResult, type Tool, type ToolApprovalFunction } from './tool';
 import type { ResolvedAgentOutput, JsonSchemaDefinition, HandoffsOutput, Expand } from './types';
-import type { RunResult } from './result';
+import type { RunResult, StreamedRunResult } from './result';
 import { type Handoff } from './handoff';
-import { NonStreamRunOptions, RunConfig } from './run';
+import { StreamRunOptions, RunConfig } from './run';
 import { RunToolApprovalItem } from './items';
 import { UnknownContext, TextOutput } from './types';
 import type * as protocol from './types/protocol';
 import type { ZodObjectLike } from './utils/zodCompat';
-type AnyAgentRunResult = RunResult<any, Agent<any, any>>;
-type CompletedRunResult<TContext, TAgent extends Agent<TContext, any>> = RunResult<TContext, TAgent> & {
+import type { RunStreamEvent } from './events';
+type AnyAgentRunResult = RunResult<any, Agent<any, any>> | StreamedRunResult<any, Agent<any, any>>;
+type CompletedRunResult<TContext, TAgent extends Agent<TContext, any>> = (RunResult<TContext, TAgent> | StreamedRunResult<TContext, TAgent>) & {
     finalOutput: ResolvedAgentOutput<TAgent['outputType']>;
+};
+type AgentToolRunOptions<TContext> = Omit<StreamRunOptions<TContext>, 'stream'>;
+type AgentToolStreamEvent = {
+    event: RunStreamEvent;
+    agentName: string;
+    toolCallId?: string;
+};
+type AgentToolEventName = AgentToolStreamEvent['event']['type'] | '*';
+type AgentToolEventHandler = (event: AgentToolStreamEvent) => void | Promise<void>;
+type AgentTool<TContext> = FunctionTool<TContext, typeof AgentAsToolNeedApprovalSchame> & {
+    on: (name: AgentToolEventName, handler: AgentToolEventHandler) => AgentTool<TContext>;
 };
 export declare function saveAgentToolRunResult(toolCall: protocol.FunctionCallItem | undefined, runResult: AnyAgentRunResult): void;
 export declare function consumeAgentToolRunResult(toolCall: protocol.FunctionCallItem): AnyAgentRunResult | undefined;
@@ -293,7 +305,7 @@ export declare class Agent<TContext = UnknownContext, TOutput extends AgentOutpu
         /**
          * Additional run options for the agent (as tool) execution.
          */
-        runOptions?: NonStreamRunOptions<TContext>;
+        runOptions?: AgentToolRunOptions<TContext>;
         /**
          * Determines whether this tool should be exposed to the model for the current run.
          */
@@ -301,7 +313,11 @@ export declare class Agent<TContext = UnknownContext, TOutput extends AgentOutpu
             runContext: RunContext<TContext>;
             agent: Agent<TContext, TOutput>;
         }) => boolean | Promise<boolean>);
-    }): FunctionTool<TContext, typeof AgentAsToolNeedApprovalSchame>;
+        /**
+         * Optional hook to receive streamed events from the nested agent run.
+         */
+        onStream?: (event: AgentToolStreamEvent) => void | Promise<void>;
+    }): AgentTool<TContext>;
     /**
      * Returns the system prompt for the agent.
      *

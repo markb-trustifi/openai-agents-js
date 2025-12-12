@@ -166,8 +166,22 @@ export class Agent extends AgentHooks {
      * @returns A tool that runs the agent and returns the output text.
      */
     asTool(options) {
-        const { toolName, toolDescription, customOutputExtractor, needsApproval, runConfig, runOptions, isEnabled, } = options;
-        return tool({
+        const { toolName, toolDescription, customOutputExtractor, needsApproval, runConfig, runOptions, isEnabled, onStream, } = options;
+        // Event handlers are scoped to this agent tool instance and are not shared; we only support registration (no removal) to keep the API surface small.
+        const eventHandlers = new Map();
+        const emitEvent = async (event) => {
+            // We intentionally keep only add semantics (no off) to reduce surface area; handlers are scoped to this agent tool instance.
+            const specific = eventHandlers.get(event.event.type);
+            const wildcard = eventHandlers.get('*');
+            const candidates = [
+                ...(onStream ? [onStream] : []),
+                ...(specific ? Array.from(specific) : []),
+                ...(wildcard ? Array.from(wildcard) : []),
+            ];
+            // Run all handlers in parallel so a slow onStream callback does not block on(...) handlers (and vice versa).
+            await Promise.allSettled(candidates.map((handler) => Promise.resolve().then(() => handler(event))));
+        };
+        const baseTool = tool({
             name: toolName ?? toFunctionToolName(this.name),
             description: toolDescription ?? '',
             parameters: AgentAsToolNeedApprovalSchame,
@@ -179,10 +193,36 @@ export class Agent extends AgentHooks {
                     throw new ModelBehaviorError('Agent tool called with invalid input');
                 }
                 const runner = new Runner(runConfig ?? {});
-                const result = await runner.run(this, data.input, {
-                    context,
-                    ...(runOptions ?? {}),
-                });
+                // Only flip to streaming mode when a handler is provided to avoid extra overhead for callers that do not need events.
+                // Flip to streaming if either a legacy onStream callback or event handlers are registered; otherwise stay on the non-stream path to avoid extra overhead.
+                const shouldStream = typeof onStream === 'function' || eventHandlers.size > 0;
+                const result = shouldStream
+                    ? await runner.run(this, data.input, {
+                        context,
+                        ...(runOptions ?? {}),
+                        stream: true,
+                    })
+                    : await runner.run(this, data.input, {
+                        context,
+                        ...(runOptions ?? {}),
+                    });
+                const streamPayload = {
+                    agentName: this.name,
+                    // Tool calls should carry IDs, but direct invocation or provider quirks can omit it, so keep this optional.
+                    toolCallId: details?.toolCall?.callId,
+                };
+                if (shouldStream) {
+                    // Cast through unknown: the async iterator shape matches and we want to drain the stream for side effects while keeping the public API stable.
+                    const streamResult = result;
+                    // Drain the stream to deliver every event to registered handlers; ensure completion awaited so the nested run finishes before returning.
+                    for await (const event of streamResult) {
+                        await emitEvent({
+                            event,
+                            ...streamPayload,
+                        });
+                    }
+                    await streamResult.completed;
+                }
                 const completedResult = result;
                 const usesStopAtToolNames = typeof this.toolUseBehavior === 'object' &&
                     this.toolUseBehavior !== null &&
@@ -200,6 +240,16 @@ export class Agent extends AgentHooks {
                 return outputText;
             },
         });
+        const agentTool = {
+            ...baseTool,
+            on: (name, handler) => {
+                const set = eventHandlers.get(name) ?? new Set();
+                set.add(handler);
+                eventHandlers.set(name, set);
+                return agentTool;
+            },
+        };
+        return agentTool;
     }
     /**
      * Returns the system prompt for the agent.

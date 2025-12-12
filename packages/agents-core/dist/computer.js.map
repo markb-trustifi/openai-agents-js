@@ -1,1 +1,1 @@
-{"version":3,"file":"computer.js","sourceRoot":"","sources":["../src/computer.ts"],"names":[],"mappings":""}
+{"version":3,"file":"computer.js","sourceRoot":"","sources":["../src/computer.ts"],"names":[],"mappings":";;AAyDA,4CAEC;AAED,4CAMC;AAVD,SAAgB,gBAAgB,CAAC,QAAkB;IACjD,OAAO,OAAQ,QAAiC,CAAC,MAAM,KAAK,UAAU,CAAC;AACzE,CAAC;AAED,SAAgB,gBAAgB,CAC9B,QAEC;IAED,OAAO,QAA8B,CAAC;AACxC,CAAC"}

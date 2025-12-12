@@ -256,6 +256,7 @@ function itemsToMessages(items) {
                 },
             });
             asst.tool_calls = toolCalls;
+            Object.assign(asst, funcCall.providerData);
         }
         else if (item.type === 'function_call_result') {
             flushAssistantMessage();

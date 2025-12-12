@@ -545,6 +545,18 @@ class AiSdkModel {
                 const result = await this.#model.doGenerate(aiSdkRequest);
                 const output = [];
                 const resultContent = result.content ?? [];
+                // Extract and add reasoning items FIRST (required by Anthropic: thinking blocks must precede tool_use blocks)
+                const reasoningParts = resultContent.filter((c) => c && c.type === 'reasoning');
+                for (const reasoningPart of reasoningParts) {
+                    const reasoningText = typeof reasoningPart.text === 'string' ? reasoningPart.text : '';
+                    output.push({
+                        type: 'reasoning',
+                        content: [{ type: 'input_text', text: reasoningText }],
+                        rawContent: [{ type: 'reasoning_text', text: reasoningText }],
+                        // Preserve provider-specific metadata (including signature for Anthropic extended thinking)
+                        providerData: reasoningPart.providerMetadata ?? undefined,
+                    });
+                }
                 const toolCalls = resultContent.filter((c) => c && c.type === 'tool-call');
                 const hasToolCalls = toolCalls.length > 0;
                 const toolsNameToToolMap = new Map(request.tools.map((tool) => [tool.name, tool]));
@@ -638,10 +650,31 @@ class AiSdkModel {
                         message: request.tracing === true ? error.message : 'Unknown error',
                         data: {
                             error: request.tracing === true
-                                ? String(error)
-                                : error instanceof Error
-                                    ? error.name
-                                    : undefined,
+                                ? {
+                                    name: error.name,
+                                    message: error.message,
+                                    // Include AI SDK specific error fields if they exist.
+                                    ...(typeof error === 'object' && error !== null
+                                        ? {
+                                            ...('responseBody' in error
+                                                ? { responseBody: error.responseBody }
+                                                : {}),
+                                            ...('responseHeaders' in error
+                                                ? {
+                                                    responseHeaders: error
+                                                        .responseHeaders,
+                                                }
+                                                : {}),
+                                            ...('statusCode' in error
+                                                ? { statusCode: error.statusCode }
+                                                : {}),
+                                            ...('cause' in error
+                                                ? { cause: error.cause }
+                                                : {}),
+                                        }
+                                        : {}),
+                                }
+                                : error.name,
                         },
                     });
                 }
@@ -649,11 +682,7 @@ class AiSdkModel {
                     span.setError({
                         message: 'Unknown error',
                         data: {
-                            error: request.tracing === true
-                                ? String(error)
-                                : error instanceof Error
-                                    ? error.name
-                                    : undefined,
+                            error: request.tracing === true ? String(error) : undefined,
                         },
                     });
                 }
@@ -725,6 +754,8 @@ class AiSdkModel {
             let usageCompletionTokens = 0;
             const functionCalls = {};
             let textOutput;
+            // State for tracking reasoning blocks (for Anthropic extended thinking)
+            const reasoningBlocks = {};
             for await (const part of stream) {
                 if (!started) {
                     started = true;
@@ -738,6 +769,36 @@ class AiSdkModel {
                         }
                         textOutput.text += part.delta;
                         yield { type: 'output_text_delta', delta: part.delta };
+                        break;
+                    }
+                    case 'reasoning-start': {
+                        // Start tracking a new reasoning block
+                        const reasoningId = part.id ?? 'default';
+                        reasoningBlocks[reasoningId] = {
+                            text: '',
+                            providerMetadata: part.providerMetadata,
+                        };
+                        break;
+                    }
+                    case 'reasoning-delta': {
+                        // Accumulate reasoning text
+                        const reasoningId = part.id ?? 'default';
+                        if (!reasoningBlocks[reasoningId]) {
+                            reasoningBlocks[reasoningId] = {
+                                text: '',
+                                providerMetadata: part.providerMetadata,
+                            };
+                        }
+                        reasoningBlocks[reasoningId].text += part.delta ?? '';
+                        break;
+                    }
+                    case 'reasoning-end': {
+                        // Capture final provider metadata (may contain signature)
+                        const reasoningId = part.id ?? 'default';
+                        if (reasoningBlocks[reasoningId] &&
+                            part.providerMetadata) {
+                            reasoningBlocks[reasoningId].providerMetadata = part.providerMetadata;
+                        }
                         break;
                     }
                     case 'tool-call': {
@@ -779,6 +840,20 @@ class AiSdkModel {
                 }
             }
             const outputs = [];
+            // Add reasoning items FIRST (required by Anthropic: thinking blocks must precede tool_use blocks)
+            // Emit reasoning item even when text is empty to preserve signature in providerData for redacted thinking streams
+            for (const [reasoningId, reasoningBlock] of Object.entries(reasoningBlocks)) {
+                if (reasoningBlock.text || reasoningBlock.providerMetadata) {
+                    outputs.push({
+                        type: 'reasoning',
+                        id: reasoningId !== 'default' ? reasoningId : undefined,
+                        content: [{ type: 'input_text', text: reasoningBlock.text }],
+                        rawContent: [{ type: 'reasoning_text', text: reasoningBlock.text }],
+                        // Preserve provider-specific metadata (including signature for Anthropic extended thinking)
+                        providerData: reasoningBlock.providerMetadata ?? undefined,
+                    });
+                }
+            }
             if (textOutput) {
                 outputs.push({
                     type: 'message',
@@ -822,10 +897,35 @@ class AiSdkModel {
         catch (error) {
             if (span) {
                 span.setError({
-                    message: 'Error streaming response',
+                    message: error instanceof Error ? error.message : 'Error streaming response',
                     data: {
                         error: request.tracing === true
-                            ? String(error)
+                            ? error instanceof Error
+                                ? {
+                                    name: error.name,
+                                    message: error.message,
+                                    // Include AI SDK specific error fields if they exist.
+                                    ...(typeof error === 'object' && error !== null
+                                        ? {
+                                            ...('responseBody' in error
+                                                ? { responseBody: error.responseBody }
+                                                : {}),
+                                            ...('responseHeaders' in error
+                                                ? {
+                                                    responseHeaders: error
+                                                        .responseHeaders,
+                                                }
+                                                : {}),
+                                            ...('statusCode' in error
+                                                ? { statusCode: error.statusCode }
+                                                : {}),
+                                            ...('cause' in error
+                                                ? { cause: error.cause }
+                                                : {}),
+                                        }
+                                        : {}),
+                                }
+                                : String(error)
                             : error instanceof Error
                                 ? error.name
                                 : undefined,

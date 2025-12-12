@@ -37,6 +37,7 @@ const safeExecute_1 = require("./utils/safeExecute.js");
 const context_1 = require("./tracing/context.js");
 const events_1 = require("./events.js");
 const zod_1 = require("zod");
+const computer_1 = require("./computer.js");
 const utils_1 = require("./utils/index.js");
 function isApprovalItemLike(value) {
     if (!value || typeof value !== 'object') {
@@ -929,6 +930,14 @@ async function executeFunctionToolCalls(agent, toolRuns, runner, state) {
                         error: String(error),
                     },
                 });
+                // Emit agent_tool_end even on error to maintain consistent event lifecycle
+                const errorResult = String(error);
+                runner.emit('agent_tool_end', state._context, agent, toolRun.tool, errorResult, {
+                    toolCall: toolRun.toolCall,
+                });
+                agent.emit('agent_tool_end', state._context, toolRun.tool, errorResult, {
+                    toolCall: toolRun.toolCall,
+                });
                 throw error;
             }
         }, {
@@ -1219,7 +1228,7 @@ async function executeComputerActions(agent, actions, runner, runContext, custom
         // Run the action and get screenshot
         let output;
         try {
-            if (computer.invoke) {
+            if ((0, computer_1.isInvokeComputer)(computer)) {
                 output = await computer.invoke(runContext, toolCall);
             }
             else {

@@ -22,7 +22,7 @@ export { IndividualRunOptions, NonStreamRunOptions, run, RunConfig, Runner, Stre
 export type { ModelInputData, CallModelInputFilter, CallModelInputFilterArgs, } from './run';
 export { RunContext } from './runContext';
 export { RunState } from './runState';
-export { HostedTool, ComputerTool, computerTool, ShellTool, shellTool, ApplyPatchTool, applyPatchTool, HostedMCPTool, hostedMcpTool, FunctionTool, FunctionToolResult, Tool, ToolOptions, tool, ToolExecuteArgument, ToolEnabledFunction, } from './tool';
+export { HostedTool, ComputerTool, computerTool, ShellTool, shellTool, ApplyPatchTool, applyPatchTool, HostedMCPTool, hostedMcpTool, FunctionTool, FunctionToolResult, Tool, tool, ToolExecuteArgument, ToolEnabledFunction, } from './tool';
 export type { ToolOutputText, ToolOutputImage, ToolOutputFileContent, ToolCallStructuredOutput, ToolCallOutputContent, } from './types/protocol';
 export * from './tracing';
 export { getGlobalTraceProvider, TraceProvider } from './tracing/provider';

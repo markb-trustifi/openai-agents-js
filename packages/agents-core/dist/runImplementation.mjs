@@ -12,6 +12,7 @@ import { safeExecute } from "./utils/safeExecute.mjs";
 import { addErrorToCurrentSpan } from "./tracing/context.mjs";
 import { RunItemStreamEvent } from "./events.mjs";
 import { z } from 'zod';
+import { isInvokeComputer } from "./computer.mjs";
 import { isZodObject } from "./utils/index.mjs";
 function isApprovalItemLike(value) {
     if (!value || typeof value !== 'object') {
@@ -904,6 +905,14 @@ export async function executeFunctionToolCalls(agent, toolRuns, runner, state) {
                         error: String(error),
                     },
                 });
+                // Emit agent_tool_end even on error to maintain consistent event lifecycle
+                const errorResult = String(error);
+                runner.emit('agent_tool_end', state._context, agent, toolRun.tool, errorResult, {
+                    toolCall: toolRun.toolCall,
+                });
+                agent.emit('agent_tool_end', state._context, toolRun.tool, errorResult, {
+                    toolCall: toolRun.toolCall,
+                });
                 throw error;
             }
         }, {
@@ -1194,7 +1203,7 @@ export async function executeComputerActions(agent, actions, runner, runContext,
         // Run the action and get screenshot
         let output;
         try {
-            if (computer.invoke) {
+            if (isInvokeComputer(computer)) {
                 output = await computer.invoke(runContext, toolCall);
             }
             else {

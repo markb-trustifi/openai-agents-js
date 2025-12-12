@@ -365,6 +365,7 @@ class Runner extends lifecycle_1.RunHooks {
                     modelResponses: state._modelResponses,
                 });
             }
+            let continuingInterruptedTurn = false;
             try {
                 while (true) {
                     // if we don't have a current step, we treat this as a new run
@@ -380,20 +381,34 @@ class Runner extends lifecycle_1.RunHooks {
                         state._toolUseTracker.addToolUse(state._currentAgent, state._lastProcessedResponse.toolsUsed);
                         state._originalInput = turnResult.originalInput;
                         state._generatedItems = turnResult.generatedItems;
-                        if (turnResult.nextStep.type === 'next_step_run_again') {
-                            state._currentTurnPersistedItemCount = 0;
-                        }
-                        state._currentStep = turnResult.nextStep;
+                        // Don't reset counter here - resolveInterruptedTurn already adjusted it via rewind logic
+                        // The counter will be reset when _currentTurn is incremented (starting a new turn)
                         if (turnResult.nextStep.type === 'next_step_interruption') {
                             // we are still in an interruption, so we need to avoid an infinite loop
+                            state._currentStep = turnResult.nextStep;
                             return new result_1.RunResult(state);
                         }
-                        continue;
+                        // If continuing from interruption with next_step_run_again, set step to undefined
+                        // so the loop treats it as a new step without incrementing the turn.
+                        // The counter has already been adjusted by resolveInterruptedTurn's rewind logic.
+                        if (turnResult.nextStep.type === 'next_step_run_again') {
+                            continuingInterruptedTurn = true;
+                            state._currentStep = undefined;
+                            continue;
+                        }
+                        continuingInterruptedTurn = false;
+                        state._currentStep = turnResult.nextStep;
                     }
                     if (state._currentStep.type === 'next_step_run_again') {
                         const artifacts = await prepareAgentArtifacts(state);
-                        state._currentTurn++;
-                        state._currentTurnPersistedItemCount = 0;
+                        const isResumingFromInterruption = isResumedState && continuingInterruptedTurn;
+                        continuingInterruptedTurn = false;
+                        // Do not advance the turn when resuming from an interruption; the next model call is
+                        // still part of the same logical turn.
+                        if (!isResumingFromInterruption) {
+                            state._currentTurn++;
+                            state._currentTurnPersistedItemCount = 0;
+                        }
                         if (state._currentTurn > state._maxTurns) {
                             state._currentAgentSpan?.setError({
                                 message: 'Max turns exceeded',
@@ -403,7 +418,8 @@ class Runner extends lifecycle_1.RunHooks {
                         }
                         logger_1.default.debug(`Running agent ${state._currentAgent.name} (turn ${state._currentTurn})`);
                         let parallelGuardrailPromise;
-                        if (state._currentTurn === 1) {
+                        // Only run input guardrails on the first turn of a new run.
+                        if (state._currentTurn === 1 && !isResumingFromInterruption) {
                             const guardrails = this.#splitInputGuardrails(state);
                             if (guardrails.blocking.length > 0) {
                                 await this.#runInputGuardrails(state, guardrails.blocking);
@@ -536,6 +552,7 @@ class Runner extends lifecycle_1.RunHooks {
                 modelResponses: result.state._modelResponses,
             });
         }
+        let continuingInterruptedTurn = false;
         try {
             while (true) {
                 const currentAgent = result.state._currentAgent;
@@ -553,20 +570,34 @@ class Runner extends lifecycle_1.RunHooks {
                     result.state._toolUseTracker.addToolUse(result.state._currentAgent, result.state._lastProcessedResponse.toolsUsed);
                     result.state._originalInput = turnResult.originalInput;
                     result.state._generatedItems = turnResult.generatedItems;
-                    if (turnResult.nextStep.type === 'next_step_run_again') {
-                        result.state._currentTurnPersistedItemCount = 0;
-                    }
-                    result.state._currentStep = turnResult.nextStep;
+                    // Don't reset counter here - resolveInterruptedTurn already adjusted it via rewind logic
+                    // The counter will be reset when _currentTurn is incremented (starting a new turn)
                     if (turnResult.nextStep.type === 'next_step_interruption') {
                         // we are still in an interruption, so we need to avoid an infinite loop
+                        result.state._currentStep = turnResult.nextStep;
                         return;
                     }
-                    continue;
+                    // If continuing from interruption with next_step_run_again, set step to undefined
+                    // so the loop treats it as a new step without incrementing the turn.
+                    // The counter has already been adjusted by resolveInterruptedTurn's rewind logic.
+                    if (turnResult.nextStep.type === 'next_step_run_again') {
+                        continuingInterruptedTurn = true;
+                        result.state._currentStep = undefined;
+                        continue;
+                    }
+                    continuingInterruptedTurn = false;
+                    result.state._currentStep = turnResult.nextStep;
                 }
                 if (result.state._currentStep.type === 'next_step_run_again') {
                     const artifacts = await prepareAgentArtifacts(result.state);
-                    result.state._currentTurn++;
-                    result.state._currentTurnPersistedItemCount = 0;
+                    const isResumingFromInterruption = isResumedState && continuingInterruptedTurn;
+                    continuingInterruptedTurn = false;
+                    // Do not advance the turn when resuming from an interruption; the next model call is
+                    // still part of the same logical turn.
+                    if (!isResumingFromInterruption) {
+                        result.state._currentTurn++;
+                        result.state._currentTurnPersistedItemCount = 0;
+                    }
                     if (result.state._currentTurn > result.state._maxTurns) {
                         result.state._currentAgentSpan?.setError({
                             message: 'Max turns exceeded',
@@ -577,7 +608,8 @@ class Runner extends lifecycle_1.RunHooks {
                     logger_1.default.debug(`Running agent ${currentAgent.name} (turn ${result.state._currentTurn})`);
                     let guardrailError;
                     let parallelGuardrailPromise;
-                    if (result.state._currentTurn === 1) {
+                    // Only run input guardrails on the first turn of a new run.
+                    if (result.state._currentTurn === 1 && !isResumingFromInterruption) {
                         const guardrails = this.#splitInputGuardrails(result.state);
                         if (guardrails.blocking.length > 0) {
                             await this.#runInputGuardrails(result.state, guardrails.blocking);
@@ -632,6 +664,7 @@ class Runner extends lifecycle_1.RunHooks {
                                 output: parsed.response.output,
                                 responseId: parsed.response.id,
                             };
+                            result.state._context.usage.add(finalResponse.usage);
                         }
                         if (result.cancelled) {
                             // When the user's code exits a loop to consume the stream, we need to break
