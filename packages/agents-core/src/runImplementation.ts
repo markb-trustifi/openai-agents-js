@@ -54,7 +54,7 @@ import { RunItemStreamEvent, RunItemStreamEventName } from './events';
 import { RunResult, StreamedRunResult } from './result';
 import { z } from 'zod';
 import * as protocol from './types/protocol';
-import { Computer } from './computer';
+import { Computer, isInvokeComputer } from './computer';
 import type { ApplyPatchResult } from './editor';
 import { RunState } from './runState';
 import { isZodObject } from './utils';
@@ -1357,6 +1357,16 @@ export async function executeFunctionToolCalls<TContext = UnknownContext>(
               error: String(error),
             },
           });
+
+          // Emit agent_tool_end even on error to maintain consistent event lifecycle
+          const errorResult = String(error);
+          runner.emit('agent_tool_end', state._context, agent, toolRun.tool, errorResult, {
+            toolCall: toolRun.toolCall,
+          });
+          agent.emit('agent_tool_end', state._context, toolRun.tool, errorResult, {
+            toolCall: toolRun.toolCall,
+          });
+
           throw error;
         }
       },
@@ -1757,7 +1767,7 @@ export async function executeComputerActions(
     // Run the action and get screenshot
     let output: string;
     try {
-      if (computer.invoke) {
+      if (isInvokeComputer(computer)) {
         output = await computer.invoke(runContext, toolCall);
       } else {
         output = await _runComputerActionAndScreenshot(computer, toolCall);
